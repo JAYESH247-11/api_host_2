@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify OTP</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; margin: 0;
+        }
+        .card {
+            background: white; padding: 2rem; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%; max-width: 350px; text-align: center;
+        }
+        h1 { color: #2d3436; font-size: 1.5rem; margin-bottom: 0.5rem; }
+        p.subtitle { color: #636e72; font-size: 0.9rem; margin-bottom: 1rem; }
+        
+        #timer-box { font-weight: bold; color: #d63031; margin-bottom: 1rem; font-size: 1rem; }
+
+        .form-group { text-align: left; margin-bottom: 1rem; }
+        label { display: block; font-size: 0.85rem; margin-bottom: 5px; font-weight: 600; color: #2d3436; }
+        
+        input[type="text"] {
+            width: 100%; padding: 12px; border: 1px solid #dfe6e9;
+            border-radius: 6px; box-sizing: border-box;
+            font-size: 1.2rem; text-align: center; letter-spacing: 8px; font-weight: bold;
+        }
+        
+        /* --- CSS માં કરેલા ફેરફાર (Click Feel Effect) --- */
+        button {
+            width: 100%; padding: 12px; background-color: #00b894;
+            color: white; border: none; border-radius: 6px;
+            font-size: 1rem; font-weight: bold; cursor: pointer;
+            transition: all 0.2s ease; /* સ્મૂધ એનિમેશન */
+            margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            outline: none;
+        }
+
+        button:hover { 
+            background-color: #009475; 
+            transform: translateY(-1px); /* હોવર પર થોડું ઉપર */
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+
+        button:active { 
+            transform: translateY(2px); /* ક્લિક પર દબાયેલું લાગશે */
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        button:disabled { 
+            background-color: #bdc3c7; 
+            cursor: not-allowed; 
+            transform: none; 
+            box-shadow: none;
+        }
+
+        #resend-btn {
+            background-color: #0984e3;
+            display: none; 
+        }
+        
+        #resend-btn:hover { 
+            background-color: #0773c5; 
+        }
+
+        #resend-btn:active {
+            background-color: #065a96;
+            transform: translateY(2px);
+        }
+        /* ------------------------------------------- */
+
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>OTP Verification</h1>
+        <div id="statusMessage" style="display: none; padding: 10px; border-radius: 6px; margin-bottom: 15px; text-align: center; font-size: 14px;"></div>
+        <p class="subtitle">Please enter the 4-digit code.</p>
+
+        <div id="timer-box">Time left: <span id="timer">60</span>s</div>
+
+        <form id="otp-form">
+            <div class="form-group">
+                <label for="otp">Enter 4-Digit OTP</label>
+                <input id="otp" type="text" placeholder="0000" maxlength="4" required autofocus autocomplete="off">
+            </div>
+
+            <button type="submit" id="verify-btn">Verify & Proceed</button>
+        </form>
+        <button type="button" id="resend-btn" onclick="resendOTP()">Resend OTP</button>
+    </div>
+
+    <script>
+        const statusMsg = document.getElementById('statusMessage');
+        const timerDisplay = document.getElementById('timer');
+        const resendBtn = document.getElementById('resend-btn');
+        const verifyBtn = document.getElementById('verify-btn');
+        const timerBox = document.getElementById('timer-box');
+        const otpForm = document.getElementById('otp-form');
+        
+        let timeLeft;
+        let countdown; 
+
+        function showMessage(text, type) {
+            statusMsg.innerText = text;
+            statusMsg.style.display = 'block';
+            
+            if (type === 'success') {
+                statusMsg.style.backgroundColor = '#d4edda';
+                statusMsg.style.color = '#155724';
+                statusMsg.style.border = '1px solid #c3e6cb';
+            } else {
+                statusMsg.style.backgroundColor = '#f8d7da';
+                statusMsg.style.color = '#721c24';
+                statusMsg.style.border = '1px solid #f5c6cb';
+            }
+            setTimeout(() => {
+                statusMsg.style.display = 'none';
+            }, 5000);
+        }
+
+        function resetTimer() {
+            clearInterval(countdown);
+            timeLeft = 60;
+            timerBox.innerHTML = `Time left: <span id="timer">${timeLeft}</span>s`;
+            resendBtn.style.display = "none";
+            verifyBtn.disabled = false; 
+
+            countdown = setInterval(() => {
+                timeLeft--;
+                const timerSpan = document.getElementById('timer');
+                if(timerSpan) timerSpan.innerText = timeLeft;
+
+                if (timeLeft <= 0) {
+                    clearInterval(countdown);
+                    timerBox.innerHTML = "OTP Expired!";
+                    resendBtn.style.display = "block";
+                }
+            }, 1000);
+        }
+
+        resetTimer();
+
+        otpForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const userEmail = localStorage.getItem("user_email");
+            const otpValue = document.getElementById('otp').value;
+
+            if (!userEmail) {
+                showMessage("User session expired. Redirecting...", "error");
+                setTimeout(() => { window.location.href = "/register"; }, 2000);
+                return;
+            }
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: userEmail,
+                        otp: otpValue
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    localStorage.setItem("token", result.token);
+                    window.location.href = "/success";
+                } else {
+                    showMessage(result.detail, "error");                
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                showMessage("Connection error!", "error");
+            }
+        });
+
+        async function resendOTP() {
+            const userEmail = localStorage.getItem("user_email");
+            const otpInput = document.getElementById('otp');
+
+            if (!userEmail) {
+                showMessage("Email not found. Please register again.", "error");
+                return;
+            }
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/resend-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: userEmail })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message, "success");
+                    otpInput.value = ""; 
+                    resetTimer();
+                } else {
+                    showMessage(result.detail || "Error occurred", "error");
+                }
+            } catch (error) {
+                showMessage("Server connection failed", "error");
+            }
+        }
+    </script>
+</body>
+</html>

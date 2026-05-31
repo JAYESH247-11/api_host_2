@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Netflix Lite</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #e50914;
+            --secondary-color: #b3b3b3;
+            --background-color: #141414;
+            --highlight-color: #ffffff;
+            --card-bg: #181818;
+        }
+        *{ margin:0; padding:0; box-sizing:border-box; }
+        body{ font-family:'Helvetica Neue',Arial,sans-serif; background:var(--background-color); color:var(--highlight-color); overflow-x:hidden; }
+        /* Navbar */
+        nav{ position:fixed; width:100%; padding:20px 50px; display:flex; justify-content:space-between; align-items:center; background:var(--background-color); z-index:1000; }
+        .logo{ color:var(--primary-color); font-size:24px; font-weight:bold; }
+        .nav-links{ display:flex; gap:25px; }
+        .nav-links a{ color:var(--secondary-color); text-decoration:none; font-size:14px; font-weight:500; }
+        .user-menu{ display:flex; align-items:center; gap:15px; }
+        .logout-btn{ padding:6px 10px; border:none; background:#e50914; color:white; border-radius:4px; cursor:pointer; }
+        /* Main */
+        .main-content{ padding:100px 50px 50px; }
+        .token-box{ background:#181818; padding:12px; border-radius:6px; margin-bottom:20px; word-break:break-all; }
+        .row{ margin:40px 0; }
+        .row h2{ font-size:22px; margin-bottom:15px; }
+        .cards{ display:flex; gap:20px; overflow-x:auto; padding:10px 0; }
+        .card{ background:var(--card-bg); padding:15px; border-radius:8px; min-width:200px; cursor:pointer; transition:0.3s; }
+        .card:hover{ transform:translateY(-5px); }
+        .card-title{ font-size:18px; font-weight:600; margin-bottom:10px; }
+        .card-description{ font-size:14px; color:var(--secondary-color); }
+        footer{ padding:20px; text-align:center; color:var(--secondary-color); font-size:14px; border-top:1px solid rgba(255,255,255,0.1); margin-top:50px; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">NETFLIX LITE</div>
+        <div class="nav-links">
+            <a href="#">Home</a>
+            <a href="#">TV Shows</a>
+            <a href="#">Movies</a>
+            <a href="#">My List</a>
+        </div>
+        <div class="user-menu">
+            <span id="username"></span>
+            <button class="logout-btn" onclick="logout()">Logout</button>
+        </div>
+    </nav>
+
+    <div class="main-content">
+        <div class="token-box">
+            <b>Your JWT Token:</b>
+            <p id="tokenBox"></p>
+        </div>
+
+        <div class="row">
+            <h2>Trending Now</h2>
+            <div class="cards">
+                <div class="card"><div class="card-title">Stranger Things</div><div class="card-description">A thrilling sci-fi series</div></div>
+                <div class="card"><div class="card-title">Money Heist</div><div class="card-description">A gripping heist drama</div></div>
+                <div class="card"><div class="card-title">The Witcher</div><div class="card-description">Epic fantasy adventure</div></div>
+                <div class="card"><div class="card-title">Breaking Bad</div><div class="card-description">A crime drama masterpiece</div></div>
+            </div>
+        </div>
+
+        <div class="row">
+            <h2>Popular on Netflix</h2>
+            <div class="cards">
+                <div class="card"><div class="card-title">Dark</div><div class="card-description">A mind-bending thriller</div></div>
+                <div class="card"><div class="card-title">Squid Game</div><div class="card-description">A survival drama series</div></div>
+                <div class="card"><div class="card-title">Peaky Blinders</div><div class="card-description">A gritty British drama</div></div>
+                <div class="card"><div class="card-title">The Crown</div><div class="card-description">A historical drama</div></div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2023 Netflix Lite. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        // check token
+        const token = localStorage.getItem("token")
+        console.log("TOKEN:", token)
+
+        if(!token){
+            alert("Login required")
+            window.location.href="/login"
+        }
+
+        // show token
+        document.getElementById("tokenBox").innerText = token
+
+        // load profile
+        fetch("/profile",{
+            headers:{
+                "Authorization":"Bearer "+token
+            }
+        })
+        .then(res=>res.json())
+        .then(data=>{
+            document.getElementById("username").innerText = "Welcome "+data.data.user_name
+        })
+        .catch(()=>{
+            alert("Session expired")
+            logout()
+        })
+
+        // logout
+        function logout(){
+            localStorage.removeItem("token")
+            window.location.href="/login"
+        }
+
+        // card click
+        document.querySelectorAll('.card').forEach(card=>{
+            card.addEventListener('click',()=>{
+                const title = card.querySelector('.card-title').textContent
+                alert("Playing: "+title)
+            })
+        })
+    </script>
+</body>
+</html>
